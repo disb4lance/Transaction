@@ -5,14 +5,21 @@ import (
 	"log"
 	"net/http"
 
+	_ "transaction-service/docs"
+	"transaction-service/internal/adapter/postgres"
 	"transaction-service/internal/handler"
-	"transaction-service/internal/repository/postgres"
 	"transaction-service/internal/service"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
+// @title Finance Tracker API
+// @version 1.0
+// @description API для управления личными финансами
+// @host localhost:8080
+// @BasePath /api/v1
 func main() {
 	ctx := context.Background()
 	db, err := pgxpool.New(ctx, "postgres://myuser:mypassword@localhost:5432/mydatabase?sslmode=disable")
@@ -23,21 +30,26 @@ func main() {
 	defer db.Close()
 
 	// Репозитории
-	transRepo := postgres.NewTransactionRepository(db)
+	//transRepo := postgres.NewTransactionRepository(db)
 	categoryRepo := postgres.NewCategoryRepository(db)
 
 	// Сервис
-	authSvc := service.NewAuthService(userRepo, tokenRepo, hasher, jwtSvc)
+	catSer := service.NewCategoryService(categoryRepo)
 
 	// Хендлер
-	authHandler := handler.NewAuthHandler(authSvc)
+	categoryHandler := handler.NewCategoryHandler(catSer)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/auth/register", authHandler.RegisterHandler)
-	mux.HandleFunc("/auth/tokens", authHandler.AuthenticateHandler)
-	mux.HandleFunc("/auth/refresh", authHandler.RefreshHandler)
-	mux.Handle("/swagger/", httpSwagger.WrapHandler)
+	r := chi.NewRouter()
+	r.Get("/swagger/*", httpSwagger.Handler(
+		httpSwagger.URL("/swagger/doc.json"),
+	))
+
+	r.Route("/api/v1", func(r chi.Router) {
+		r.Post("/categories", categoryHandler.Create)
+		r.Get("/categories", categoryHandler.GetAll)
+		r.Get("/categories/{id}", categoryHandler.GetById)
+	})
 
 	log.Println("Server started on :8080")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	log.Fatal(http.ListenAndServe(":8080", r))
 }

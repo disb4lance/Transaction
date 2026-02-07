@@ -1,9 +1,9 @@
-package repository
+package service
 
 import (
 	"github.com/google/uuid"
 
-	model "transaction-service/internal/models"
+	model "transaction-service/internal/domain"
 )
 
 type TransactionRepository interface {
@@ -12,4 +12,16 @@ type TransactionRepository interface {
 	GetAllByUserId(userId uuid.UUID) ([]model.Transaction, error)
 	Update(transaction *model.Transaction) error
 	Delete(id uuid.UUID) error
+}
+
+type TransactionService struct {
+	transactionRepo TransactionRepository
+}
+
+func NewTransactionService(
+	t TransactionRepository,
+) *TransactionService {
+	return &TransactionService{
+		transactionRepo: t,
+	}
 }

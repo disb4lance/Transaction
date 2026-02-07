@@ -3,9 +3,7 @@ package postgres
 import (
 	"context"
 	"time"
-	model "transaction-service/internal/models"
-
-	"transaction-service/internal/repository"
+	model "transaction-service/internal/domain"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -16,7 +14,7 @@ type TransactionRepository struct {
 	db *pgxpool.Pool
 }
 
-func NewTransactionRepository(db *pgxpool.Pool) repository.TransactionRepository {
+func NewTransactionRepository(db *pgxpool.Pool) *TransactionRepository {
 	return &TransactionRepository{db: db}
 }
 

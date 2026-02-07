@@ -3,20 +3,18 @@ package postgres
 import (
 	"context"
 	"time"
-	model "transaction-service/internal/models"
+	model "transaction-service/internal/domain"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-
-	"transaction-service/internal/repository"
 )
 
 type CategoryRepository struct {
 	db *pgxpool.Pool
 }
 
-func NewCategoryRepository(db *pgxpool.Pool) repository.CategoryRepository {
+func NewCategoryRepository(db *pgxpool.Pool) *CategoryRepository {
 	return &CategoryRepository{db: db}
 }
 
@@ -26,7 +24,7 @@ func (r *CategoryRepository) Create(category *model.Category) error {
 
 	_, err := r.db.Exec(ctx,
 		`INSERT INTO categories (id, name, description)
-		VALUES ($1, $2, $3, $4, $5, $6)`,
+		VALUES ($1, $2, $3)`,
 		category.Id, category.Name, category.Description,
 	)
 	return err
