@@ -23,8 +23,8 @@ func (r *TransactionRepository) Create(transaction *model.Transaction) error {
 	defer cancel()
 
 	_, err := r.db.Exec(ctx,
-		"INSERT INTO transactions (id, name, amount, user_id, category_id, created_at = NOW()) VALUES ($1, $2, $3, $4, $5, $6)",
-		transaction.ID, transaction.Name, transaction.Amount, transaction.UserID, transaction.CategoryID, transaction.CreatedAt,
+		"INSERT INTO transactions (id, name, amount, user_id, category_id) VALUES ($1, $2, $3, $4, $5)",
+		transaction.ID, transaction.Name, transaction.Amount, transaction.UserID, transaction.CategoryID,
 	)
 	return err
 }

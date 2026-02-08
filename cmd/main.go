@@ -4,9 +4,11 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
 
 	_ "transaction-service/docs"
 	"transaction-service/internal/adapter/postgres"
+	"transaction-service/internal/adapter/redis"
 	"transaction-service/internal/handler"
 	"transaction-service/internal/service"
 
@@ -29,15 +31,24 @@ func main() {
 
 	defer db.Close()
 
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		redisAddr = "localhost:6379"
+	}
+
+	redisCache := redis.NewRedisClient(redisAddr)
+
 	// Репозитории
-	//transRepo := postgres.NewTransactionRepository(db)
+	transRepo := postgres.NewTransactionRepository(db)
 	categoryRepo := postgres.NewCategoryRepository(db)
 
 	// Сервис
-	catSer := service.NewCategoryService(categoryRepo)
+	catSer := service.NewCategoryService(categoryRepo, redisCache)
+	transSer := service.NewTransactionService(transRepo)
 
 	// Хендлер
 	categoryHandler := handler.NewCategoryHandler(catSer)
+	transactionHandler := handler.NewTransactionHandler(transSer)
 
 	r := chi.NewRouter()
 	r.Get("/swagger/*", httpSwagger.Handler(
@@ -48,6 +59,7 @@ func main() {
 		r.Post("/categories", categoryHandler.Create)
 		r.Get("/categories", categoryHandler.GetAll)
 		r.Get("/categories/{id}", categoryHandler.GetById)
+		r.Post("/transactions", transactionHandler.CreateTransaction)
 	})
 
 	log.Println("Server started on :8080")

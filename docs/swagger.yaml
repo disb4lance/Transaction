@@ -21,6 +21,34 @@ definitions:
       name:
         type: string
     type: object
+  dto.TransactionRequest:
+    properties:
+      amount:
+        type: number
+      category_id:
+        type: string
+      name:
+        maxLength: 20
+        minLength: 2
+        type: string
+    required:
+    - name
+    type: object
+  dto.TransactionResponse:
+    properties:
+      amount:
+        type: number
+      category_id:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      user_id:
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact: {}
@@ -107,4 +135,30 @@ paths:
       summary: Получить категорию по ID
       tags:
       - categories
+  /transactions:
+    post:
+      consumes:
+      - application/json
+      description: Создает новую транзакцию
+      parameters:
+      - description: Данные транзакции
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.TransactionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.TransactionResponse'
+        "400":
+          description: invalid body
+          schema:
+            type: string
+      summary: Создание новой транзакции
+      tags:
+      - transactions
 swagger: "2.0"

@@ -128,6 +128,46 @@
                     }
                 }
             }
+        },
+        "/transactions": {
+            "post": {
+                "description": "Создает новую транзакцию",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Создание новой транзакции",
+                "parameters": [
+                    {
+                        "description": "Данные транзакции",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.TransactionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.TransactionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "invalid body",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -158,6 +198,48 @@
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.TransactionRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "category_id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 20,
+                    "minLength": 2
+                }
+            }
+        },
+        "dto.TransactionResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "category_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "user_id": {
                     "type": "string"
                 }
             }
