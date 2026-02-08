@@ -60,6 +60,8 @@ func main() {
 		r.Get("/categories", categoryHandler.GetAll)
 		r.Get("/categories/{id}", categoryHandler.GetById)
 		r.Post("/transactions", transactionHandler.CreateTransaction)
+		r.Get("/transactions/{id}", transactionHandler.GetById)
+		r.Get("/transactions/user/{user_id}", transactionHandler.GetAllByUserId)
 	})
 
 	log.Println("Server started on :8080")

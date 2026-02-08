@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"time"
 	model "transaction-service/internal/domain"
+	"transaction-service/internal/service/contract"
 	"transaction-service/internal/service/dto"
 
 	"github.com/google/uuid"
@@ -15,20 +16,14 @@ type CategoryRepository interface {
 	GetAll() ([]model.Category, error)
 }
 
-type RedisClient interface {
-	Get(key string, dest interface{}) bool
-	Set(key string, value interface{}, ttl time.Duration) bool
-	Delete(key string) bool
-}
-
 type CategoryService struct {
 	categoryRepo CategoryRepository
-	redis        RedisClient
+	redis        contract.RedisClient
 }
 
 func NewCategoryService(
 	c CategoryRepository,
-	r RedisClient,
+	r contract.RedisClient,
 ) *CategoryService {
 	return &CategoryService{
 		categoryRepo: c,
