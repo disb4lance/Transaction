@@ -7,6 +7,7 @@ import (
 	"os"
 
 	_ "transaction-service/docs"
+	"transaction-service/internal/adapter/kafka"
 	"transaction-service/internal/adapter/postgres"
 	"transaction-service/internal/adapter/redis"
 	"transaction-service/internal/handler"
@@ -38,13 +39,18 @@ func main() {
 
 	redisCache := redis.NewRedisClient(redisAddr)
 
+	producer := kafka.NewProducer(
+		"localhost:9092",
+		"transactions.created",
+	)
+
 	// Репозитории
 	transRepo := postgres.NewTransactionRepository(db)
 	categoryRepo := postgres.NewCategoryRepository(db)
 
 	// Сервис
 	catSer := service.NewCategoryService(categoryRepo, redisCache)
-	transSer := service.NewTransactionService(transRepo)
+	transSer := service.NewTransactionService(transRepo, redisCache, producer)
 
 	// Хендлер
 	categoryHandler := handler.NewCategoryHandler(catSer)

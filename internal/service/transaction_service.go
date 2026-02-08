@@ -1,13 +1,22 @@
 package service
 
 import (
+	"context"
 	"time"
+	"transaction-service/internal/adapter/kafka"
 	model "transaction-service/internal/domain"
 	"transaction-service/internal/service/contract"
 	"transaction-service/internal/service/dto"
 
 	"github.com/google/uuid"
 )
+
+type TransactionEventPublisher interface {
+	PublishTransactionCreated(
+		ctx context.Context,
+		event kafka.TransactionCreatedEvent,
+	) error
+}
 
 type TransactionRepository interface {
 	Create(transaction *model.Transaction) error
@@ -20,24 +29,30 @@ type TransactionRepository interface {
 type TransactionService struct {
 	transactionRepo TransactionRepository
 	redis           contract.RedisClient
+	eventPublisher  TransactionEventPublisher
 }
 
 func NewTransactionService(
 	t TransactionRepository,
 	r contract.RedisClient,
+	publisher TransactionEventPublisher,
 ) *TransactionService {
 	return &TransactionService{
 		transactionRepo: t,
 		redis:           r,
+		eventPublisher:  publisher,
 	}
 }
 
-func (s *TransactionService) CreateTransaction(req dto.TransactionRequest) (*dto.TransactionResponse, error) {
+func (s *TransactionService) CreateTransaction(
+	req dto.TransactionRequest,
+) (*dto.TransactionResponse, error) {
+
 	transaction := &model.Transaction{
 		ID:         uuid.New(),
 		Name:       req.Name,
 		Amount:     req.Amount,
-		UserID:     uuid.New(), //TODO брать из токена
+		UserID:     uuid.New(), // TODO из токена
 		CategoryID: req.CategoryID,
 	}
 
@@ -45,12 +60,27 @@ func (s *TransactionService) CreateTransaction(req dto.TransactionRequest) (*dto
 		return nil, err
 	}
 
+	event := kafka.TransactionCreatedEvent{
+		TransactionID: transaction.ID.String(),
+		UserID:        transaction.UserID.String(),
+		CategoryID:    transaction.CategoryID.String(),
+		Amount:        transaction.Amount,
+		CreatedAt:     transaction.CreatedAt,
+	}
+
+	if err := s.eventPublisher.PublishTransactionCreated(
+		context.Background(),
+		event,
+	); err != nil {
+		return nil, err
+	}
+
 	return &dto.TransactionResponse{
 		Id:         transaction.ID,
 		Name:       transaction.Name,
-		Amount:     req.Amount,
+		Amount:     transaction.Amount,
 		UserID:     transaction.UserID,
-		CategoryID: req.CategoryID,
+		CategoryID: transaction.CategoryID,
 		CreatedAt:  transaction.CreatedAt,
 	}, nil
 }
