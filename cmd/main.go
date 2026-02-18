@@ -5,17 +5,15 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	_ "transaction-service/docs"
-	"transaction-service/internal/adapter/kafka"
-	"transaction-service/internal/adapter/postgres"
-	"transaction-service/internal/adapter/redis"
-	"transaction-service/internal/handler"
-	"transaction-service/internal/service"
+	"transaction-service/internal/app"
+	"transaction-service/internal/config"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
-	httpSwagger "github.com/swaggo/http-swagger"
+	"github.com/joho/godotenv"
 )
 
 // @title Finance Tracker API
@@ -24,52 +22,44 @@ import (
 // @host localhost:8080
 // @BasePath /api/v1
 func main() {
-	ctx := context.Background()
-	db, err := pgxpool.New(ctx, "postgres://myuser:mypassword@localhost:5432/mydatabase?sslmode=disable")
+	err := godotenv.Load()
 	if err != nil {
-		log.Fatal(err)
+		log.Println("no .env file found")
 	}
 
-	defer db.Close()
+	logger := log.New(os.Stdout, "[transaction-service] ", log.LstdFlags)
 
-	redisAddr := os.Getenv("REDIS_ADDR")
-	if redisAddr == "" {
-		redisAddr = "localhost:6379"
+	cfg, err := config.Load()
+	if err != nil {
+		logger.Fatal(err)
 	}
 
-	redisCache := redis.NewRedisClient(redisAddr)
+	application, err := app.New(cfg, logger)
+	if err != nil {
+		logger.Fatal(err)
+	}
 
-	producer := kafka.NewProducer(
-		"localhost:9092",
-		"transactions.created",
-	)
+	go func() {
+		logger.Printf("starting %s server on %s", cfg.Env, application.Server.Addr)
+		if err := application.Server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatal(err)
+		}
+	}()
 
-	// Репозитории
-	transRepo := postgres.NewTransactionRepository(db)
-	categoryRepo := postgres.NewCategoryRepository(db)
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
 
-	// Сервис
-	catSer := service.NewCategoryService(categoryRepo, redisCache)
-	transSer := service.NewTransactionService(transRepo, redisCache, producer)
+	logger.Println("shutting down server...")
 
-	// Хендлер
-	categoryHandler := handler.NewCategoryHandler(catSer)
-	transactionHandler := handler.NewTransactionHandler(transSer)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-	r := chi.NewRouter()
-	r.Get("/swagger/*", httpSwagger.Handler(
-		httpSwagger.URL("/swagger/doc.json"),
-	))
+	if err := application.Server.Shutdown(ctx); err != nil {
+		logger.Fatal("server forced to shutdown:", err)
+	}
 
-	r.Route("/api/v1", func(r chi.Router) {
-		r.Post("/categories", categoryHandler.Create)
-		r.Get("/categories", categoryHandler.GetAll)
-		r.Get("/categories/{id}", categoryHandler.GetById)
-		r.Post("/transactions", transactionHandler.CreateTransaction)
-		r.Get("/transactions/{id}", transactionHandler.GetById)
-		r.Get("/transactions/user/{user_id}", transactionHandler.GetAllByUserId)
-	})
+	application.DB.Close()
 
-	log.Println("Server started on :8080")
-	log.Fatal(http.ListenAndServe(":8080", r))
+	logger.Println("server exiting")
 }

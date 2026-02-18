@@ -3,19 +3,11 @@ package kafka
 import (
 	"context"
 	"encoding/json"
-	"time"
+	"fmt"
+	"transaction-service/internal/adapter/kafka/kmodel"
 
 	"github.com/segmentio/kafka-go"
-	"github.com/shopspring/decimal"
 )
-
-type TransactionCreatedEvent struct {
-	TransactionID string          `json:"transaction_id"`
-	UserID        string          `json:"user_id"`
-	CategoryID    string          `json:"category_id"`
-	Amount        decimal.Decimal `json:"amount"`
-	CreatedAt     time.Time       `json:"created_at"`
-}
 
 type Producer struct {
 	writer *kafka.Writer
@@ -35,17 +27,18 @@ func NewProducer(
 	}
 }
 
-func (p *Producer) PublishTransactionCreated(
+func (p *Producer) PublishTransactionEvent(
 	ctx context.Context,
-	event TransactionCreatedEvent,
+	topic string,
+	event kmodel.TransactionEvent,
 ) error {
-
 	payload, err := json.Marshal(event)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal event: %w", err)
 	}
 
 	return p.writer.WriteMessages(ctx, kafka.Message{
+		Topic: topic,
 		Key:   []byte(event.UserID),
 		Value: payload,
 	})

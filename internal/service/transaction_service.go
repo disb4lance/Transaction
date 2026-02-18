@@ -2,8 +2,9 @@ package service
 
 import (
 	"context"
+	"errors"
 	"time"
-	"transaction-service/internal/adapter/kafka"
+	"transaction-service/internal/adapter/kafka/kmodel"
 	model "transaction-service/internal/domain"
 	"transaction-service/internal/service/contract"
 	"transaction-service/internal/service/dto"
@@ -12,9 +13,10 @@ import (
 )
 
 type TransactionEventPublisher interface {
-	PublishTransactionCreated(
+	PublishTransactionEvent(
 		ctx context.Context,
-		event kafka.TransactionCreatedEvent,
+		topic string,
+		event kmodel.TransactionEvent,
 	) error
 }
 
@@ -60,7 +62,7 @@ func (s *TransactionService) CreateTransaction(
 		return nil, err
 	}
 
-	event := kafka.TransactionCreatedEvent{
+	event := kmodel.TransactionEvent{
 		TransactionID: transaction.ID.String(),
 		UserID:        transaction.UserID.String(),
 		CategoryID:    transaction.CategoryID.String(),
@@ -68,8 +70,9 @@ func (s *TransactionService) CreateTransaction(
 		CreatedAt:     transaction.CreatedAt,
 	}
 
-	if err := s.eventPublisher.PublishTransactionCreated(
+	if err := s.eventPublisher.PublishTransactionEvent(
 		context.Background(),
+		"transactions.created",
 		event,
 	); err != nil {
 		return nil, err
@@ -134,4 +137,88 @@ func (s *TransactionService) GetAllByUserId(userId uuid.UUID) ([]dto.Transaction
 	}
 
 	return result, nil
+}
+
+func (s *TransactionService) Update(userId uuid.UUID, transactionNew dto.EditTransactionRequest) error {
+	transaction, err := s.transactionRepo.GetById(transactionNew.Id)
+	if err != nil {
+		return err
+	}
+
+	if transaction == nil {
+		return errors.New("transaction not found")
+	}
+
+	if transaction.UserID != userId {
+		return errors.New("access denied")
+	}
+
+	transaction = &model.Transaction{
+		ID:         transactionNew.Id,
+		Name:       transactionNew.Name,
+		Amount:     transactionNew.Amount,
+		UserID:     userId, // TODO из токена
+		CategoryID: transactionNew.CategoryID,
+	}
+
+	event := kmodel.TransactionEvent{
+		TransactionID: transaction.ID.String(),
+		UserID:        transaction.UserID.String(),
+		CategoryID:    transaction.CategoryID.String(),
+		Amount:        transaction.Amount,
+		CreatedAt:     transaction.CreatedAt,
+	}
+
+	err = s.transactionRepo.Update(transaction)
+	if err != nil {
+		return err
+	}
+
+	if err := s.eventPublisher.PublishTransactionEvent(
+		context.Background(),
+		"transactions.updated",
+		event,
+	); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *TransactionService) Delete(userId uuid.UUID, id uuid.UUID) error {
+	transaction, err := s.transactionRepo.GetById(id)
+	if err != nil {
+		return err
+	}
+
+	if transaction == nil {
+		return errors.New("transaction not found")
+	}
+
+	if transaction.UserID != userId {
+		return errors.New("access denied")
+	}
+
+	err = s.transactionRepo.Delete(id)
+	if err != nil {
+		return err
+	}
+
+	event := kmodel.TransactionEvent{
+		TransactionID: transaction.ID.String(),
+		UserID:        transaction.UserID.String(),
+		CategoryID:    transaction.CategoryID.String(),
+		Amount:        transaction.Amount,
+		CreatedAt:     transaction.CreatedAt,
+	}
+
+	if err := s.eventPublisher.PublishTransactionEvent(
+		context.Background(),
+		"transactions.deleted",
+		event,
+	); err != nil {
+		return err
+	}
+
+	return nil
 }

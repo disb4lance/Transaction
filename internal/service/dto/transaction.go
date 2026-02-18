@@ -21,3 +21,10 @@ type TransactionResponse struct {
 	CategoryID uuid.UUID       `json:"category_id"`
 	CreatedAt  time.Time       `json:"created_at"`
 }
+
+type EditTransactionRequest struct {
+	Id         uuid.UUID       `json:"id"`
+	Name       string          `json:"name" validate:"required,min=2,max=20"`
+	Amount     decimal.Decimal `json:"amount"`
+	CategoryID uuid.UUID       `json:"category_id"`
+}
