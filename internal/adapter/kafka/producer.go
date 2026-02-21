@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"transaction-service/internal/adapter/kafka/kmodel"
+	"transaction-service/internal/config"
 
 	"github.com/segmentio/kafka-go"
 )
@@ -13,15 +15,16 @@ type Producer struct {
 	writer *kafka.Writer
 }
 
-func NewProducer(
-	broker string,
-	topic string,
-) *Producer {
+func NewProducerWithBrokers(cfg config.KafkaConfig) *Producer {
+	brokers := strings.Split(cfg.Brokers, ",")
+
+	for i, b := range brokers {
+		brokers[i] = strings.TrimSpace(b)
+	}
 
 	return &Producer{
 		writer: &kafka.Writer{
-			Addr:     kafka.TCP(broker),
-			Topic:    topic,
+			Addr:     kafka.TCP(brokers...),
 			Balancer: &kafka.LeastBytes{},
 		},
 	}

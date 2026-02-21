@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"time"
 	"transaction-service/internal/adapter/kafka"
 	"transaction-service/internal/adapter/postgres"
@@ -24,25 +23,28 @@ type App struct {
 }
 
 func New(cfg *config.Config, logger *log.Logger) (*App, error) {
-	ctx := context.Background()
-	db, err := pgxpool.New(ctx, "postgres://myuser:mypassword@localhost:5432/mydatabase?sslmode=disable")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	defer db.Close()
-
-	redisAddr := os.Getenv("REDIS_ADDR")
-	if redisAddr == "" {
-		redisAddr = "localhost:6379"
-	}
-
-	redisCache := redis.NewRedisClient(redisAddr)
-
-	producer := kafka.NewProducer(
-		"localhost:9092",
-		"transactions.created",
+	// Изменено: cfg.Database.* вместо cfg.DB.*
+	connString := fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
+		cfg.Database.User,
+		cfg.Database.Password,
+		cfg.Database.Host,
+		cfg.Database.Port,
+		cfg.Database.Name,
+		cfg.Database.SSLMode,
 	)
+
+	db, err := pgxpool.New(context.Background(), connString)
+	if err != nil {
+		return nil, err
+	}
+
+	redisCache, err := redis.NewRedisClientWithError(cfg.Redis)
+	if err != nil {
+		return nil, err
+	}
+
+	producer := kafka.NewProducerWithBrokers(cfg.Kafka)
 
 	// Репозитории
 	transRepo := postgres.NewTransactionRepository(db)
@@ -57,14 +59,14 @@ func New(cfg *config.Config, logger *log.Logger) (*App, error) {
 	transactionHandler := handler.NewTransactionHandler(transSer)
 
 	// router
-	router := transport.NewRouter(transactionHandler, categoryHandler)
+	router := transport.NewRouter(transactionHandler, categoryHandler, cfg)
 
 	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.Port),
+		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
 		Handler:      router,
 		IdleTimeout:  time.Minute,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 30 * time.Second,
+		ReadTimeout:  cfg.Server.ReadTimeout,
+		WriteTimeout: cfg.Server.WriteTimeout,
 	}
 
 	return &App{

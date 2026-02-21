@@ -31,7 +31,7 @@ func NewCategoryService(
 	}
 }
 
-func (s *CategoryService) CreateCategory(req dto.CategoryRequest) (*dto.CategoryResponse, error) {
+func (s *CategoryService) Create(req dto.CategoryRequest) (*dto.CategoryResponse, error) {
 	category := &model.Category{
 		Id:   uuid.New(),
 		Name: req.Name,

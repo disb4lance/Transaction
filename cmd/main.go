@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -19,13 +20,19 @@ import (
 // @title Finance Tracker API
 // @version 1.0
 // @description API для управления личными финансами
-// @host localhost:8080
+
+// @host localhost:8081
 // @BasePath /api/v1
+
+// @securityDefinitions.apikey BearerAuth
+// @type apiKey
+// @in header
+// @name Authorization
+// @description Введите ваш JWT токен без префикса "Bearer"
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Println("no .env file found")
-	}
+	envPath := filepath.Join("..", ".env")
+
+	err := godotenv.Load(envPath)
 
 	logger := log.New(os.Stdout, "[transaction-service] ", log.LstdFlags)
 
@@ -40,7 +47,8 @@ func main() {
 	}
 
 	go func() {
-		logger.Printf("starting %s server on %s", cfg.Env, application.Server.Addr)
+		// Изменено: cfg.Server.Env и cfg.Server.Port
+		logger.Printf("starting %s server on :%d", cfg.Server.Env, cfg.Server.Port)
 		if err := application.Server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Fatal(err)
 		}

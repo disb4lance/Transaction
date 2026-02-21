@@ -10,7 +10,7 @@ import (
 )
 
 type CategoryService interface {
-	CreateCategory(req dto.CategoryRequest) (*dto.CategoryResponse, error)
+	Create(req dto.CategoryRequest) (*dto.CategoryResponse, error)
 	GetById(id uuid.UUID) (*dto.CategoryResponse, error)
 	GetAll() ([]dto.CategoryResponse, error)
 }
@@ -41,7 +41,7 @@ func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := h.service.CreateCategory(req)
+	resp, err := h.service.Create(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+	"transaction-service/internal/config"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -14,22 +15,22 @@ type RedisClient struct {
 	ctx    context.Context
 }
 
-func NewRedisClient(addr string) *RedisClient {
+func NewRedisClientWithError(cfg config.RedisConfig) (*RedisClient, error) {
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     addr,
-		Password: "",
-		DB:       0,
+		Addr:     cfg.Addr,
+		Password: cfg.Password,
+		DB:       cfg.DB,
 	})
 
 	ctx := context.Background()
 	if err := rdb.Ping(ctx).Err(); err != nil {
-		panic(fmt.Sprintf("Failed to connect to Redis: %v", err))
+		return nil, fmt.Errorf("failed to connect to Redis at %s: %w", cfg.Addr, err)
 	}
 
 	return &RedisClient{
 		client: rdb,
 		ctx:    ctx,
-	}
+	}, nil
 }
 
 func (r *RedisClient) Get(key string, dest interface{}) bool {

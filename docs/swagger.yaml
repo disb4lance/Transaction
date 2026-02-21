@@ -21,6 +21,19 @@ definitions:
       name:
         type: string
     type: object
+  dto.EditTransactionRequest:
+    properties:
+      amount:
+        type: number
+      category_id:
+        type: string
+      name:
+        maxLength: 20
+        minLength: 2
+        type: string
+    required:
+    - name
+    type: object
   dto.TransactionRequest:
     properties:
       amount:
@@ -49,7 +62,7 @@ definitions:
       user_id:
         type: string
     type: object
-host: localhost:8080
+host: localhost:8081
 info:
   contact: {}
   description: API для управления личными финансами
@@ -136,6 +149,32 @@ paths:
       tags:
       - categories
   /transactions:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список всех транзакций пользователя
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.TransactionResponse'
+            type: array
+        "401":
+          description: unauthorized
+          schema:
+            type: string
+        "500":
+          description: internal server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Получить все транзакции пользователя
+      tags:
+      - transactions
     post:
       consumes:
       - application/json
@@ -158,10 +197,49 @@ paths:
           description: invalid body
           schema:
             type: string
+      security:
+      - BearerAuth: []
       summary: Создание новой транзакции
       tags:
       - transactions
   /transactions/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет существующую транзакцию по ID
+      parameters:
+      - description: ID транзакции (UUID)
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content - транзакция успешно удалена
+        "400":
+          description: invalid transaction id
+          schema:
+            type: string
+        "401":
+          description: unauthorized
+          schema:
+            type: string
+        "404":
+          description: transaction not found
+          schema:
+            type: string
+        "500":
+          description: internal server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Удаление транзакции
+      tags:
+      - transactions
     get:
       consumes:
       - application/json
@@ -191,34 +269,54 @@ paths:
           description: internal server error
           schema:
             type: string
+      security:
+      - BearerAuth: []
       summary: Получить тразакцию по ID
       tags:
       - transactions
-  /transactions/user/{user_id}:
-    get:
+    put:
       consumes:
       - application/json
-      description: Возвращает список всех транзакций пользователя
+      description: Обновляет существующую транзакцию по ID
       parameters:
-      - description: ID пользователя
-        in: query
-        name: user_id
+      - description: ID транзакции
+        format: uuid
+        in: path
+        name: id
         required: true
         type: string
+      - description: Данные для обновления
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.EditTransactionRequest'
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
+        "204":
+          description: No Content - транзакция успешно обновлена
+        "400":
+          description: invalid request
           schema:
-            items:
-              $ref: '#/definitions/dto.TransactionResponse'
-            type: array
+            type: string
+        "404":
+          description: transaction not found
+          schema:
+            type: string
         "500":
           description: internal server error
           schema:
             type: string
-      summary: Получить все транзакции пользователя
+      security:
+      - BearerAuth: []
+      summary: Обновление транзакции
       tags:
       - transactions
+securityDefinitions:
+  BearerAuth:
+    description: Введите ваш JWT токен без префикса "Bearer"
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"
