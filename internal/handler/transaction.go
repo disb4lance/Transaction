@@ -12,7 +12,9 @@ import (
 )
 
 type TransactionService interface {
-	Create(req dto.TransactionRequest) (*dto.TransactionResponse, error)
+	Create(userId uuid.UUID,
+		req dto.TransactionRequest,
+	) (*dto.TransactionResponse, error)
 	GetById(id uuid.UUID) (*dto.TransactionResponse, error)
 	GetAllByUserId(userId uuid.UUID) ([]dto.TransactionResponse, error)
 	Update(id uuid.UUID, userId uuid.UUID, transactionNew dto.EditTransactionRequest) error
@@ -39,7 +41,7 @@ func NewTransactionHandler(s TransactionService) *TransactionHandler {
 // @Security BearerAuth
 // @Router /transactions  [post]
 func (h *TransactionHandler) Create(w http.ResponseWriter, r *http.Request) {
-	_, ok := middleware.GetUserID(r.Context())
+	userId, ok := middleware.GetUserID(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -52,7 +54,7 @@ func (h *TransactionHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := h.service.Create(req)
+	resp, err := h.service.Create(userId, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -99,7 +101,7 @@ func (h *TransactionHandler) GetById(w http.ResponseWriter, r *http.Request) {
 	resp, err := h.service.GetById(id)
 	if err != nil {
 		if err.Error() == "not found" || strings.Contains(err.Error(), "not found") {
-			http.Error(w, "category not found", http.StatusNotFound)
+			http.Error(w, "transaction not found", http.StatusNotFound)
 			return
 		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)

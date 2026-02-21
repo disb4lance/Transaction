@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 	"transaction-service/internal/adapter/kafka/kmodel"
 	model "transaction-service/internal/domain"
@@ -46,7 +47,7 @@ func NewTransactionService(
 	}
 }
 
-func (s *TransactionService) Create(
+func (s *TransactionService) Create(userId uuid.UUID,
 	req dto.TransactionRequest,
 ) (*dto.TransactionResponse, error) {
 
@@ -54,7 +55,7 @@ func (s *TransactionService) Create(
 		ID:         uuid.New(),
 		Name:       req.Name,
 		Amount:     req.Amount,
-		UserID:     uuid.New(), // TODO из токена
+		UserID:     userId,
 		CategoryID: req.CategoryID,
 	}
 
@@ -92,6 +93,9 @@ func (s *TransactionService) GetById(id uuid.UUID) (*dto.TransactionResponse, er
 	transaction, err := s.transactionRepo.GetById(id)
 	if err != nil {
 		return nil, err
+	}
+	if transaction == nil {
+		return nil, fmt.Errorf("transaction with id %s not found", id)
 	}
 
 	return &dto.TransactionResponse{
@@ -169,10 +173,10 @@ func (s *TransactionService) Update(id uuid.UUID, userId uuid.UUID, transactionN
 	// 	CreatedAt:     transaction.CreatedAt,
 	// }
 
-	// err = s.transactionRepo.Update(transaction)
-	// if err != nil {
-	// 	return err
-	// }
+	err = s.transactionRepo.Update(transaction)
+	if err != nil {
+		return err
+	}
 
 	// if err := s.eventPublisher.PublishTransactionEvent(
 	// 	context.Background(),
