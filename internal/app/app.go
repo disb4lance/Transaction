@@ -26,12 +26,12 @@ func New(cfg *config.Config, logger *log.Logger) (*App, error) {
 	// Изменено: cfg.Database.* вместо cfg.DB.*
 	connString := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		cfg.Database.User,
-		cfg.Database.Password,
-		cfg.Database.Host,
-		cfg.Database.Port,
-		cfg.Database.Name,
-		cfg.Database.SSLMode,
+		cfg.DBUser,
+		cfg.DBPassword,
+		cfg.DBHost,
+		cfg.DBPort,
+		cfg.DBName,
+		cfg.DBSSLMode,
 	)
 
 	db, err := pgxpool.New(context.Background(), connString)
@@ -62,11 +62,9 @@ func New(cfg *config.Config, logger *log.Logger) (*App, error) {
 	router := transport.NewRouter(transactionHandler, categoryHandler, cfg)
 
 	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
-		Handler:      router,
-		IdleTimeout:  time.Minute,
-		ReadTimeout:  cfg.Server.ReadTimeout,
-		WriteTimeout: cfg.Server.WriteTimeout,
+		Addr:        fmt.Sprintf(":%s", cfg.APIPort),
+		Handler:     router,
+		IdleTimeout: time.Minute,
 	}
 
 	return &App{

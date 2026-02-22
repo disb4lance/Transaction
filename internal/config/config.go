@@ -1,131 +1,110 @@
+// config/config.go
 package config
 
 import (
-	"fmt"
 	"os"
 	"strconv"
 	"time"
 )
 
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	Redis    RedisConfig
-	Kafka    KafkaConfig
-	JWT      JWTConfig
-}
+	// App
+	APIHost string
+	APIPort string
 
-type ServerConfig struct {
-	Port         int
-	Env          string
-	ReadTimeout  time.Duration
-	WriteTimeout time.Duration
-}
+	// Database
+	DBHost     string
+	DBPort     string
+	DBUser     string
+	DBPassword string
+	DBName     string
+	DBSSLMode  string
 
-type DatabaseConfig struct {
-	User     string
-	Password string
-	Name     string
+	// Redis
+	Redis RedisConfig
+
+	// Kafka
+	Kafka KafkaConfig
+
+	// JWT
+	JWTSecret            string
+	JWTAccessExpiration  time.Duration
+	JWTRefreshExpiration time.Duration
+}
+type RedisConfig struct {
 	Host     string
 	Port     string
-	SSLMode  string
-	MaxConns int
-}
-
-type RedisConfig struct {
-	Addr     string
 	Password string
 	DB       int
 }
 
 type KafkaConfig struct {
 	Brokers       string
-	TopicPrefix   string
+	CreatedTopic  string
+	UpdatedTopic  string
+	DeletedTopic  string
 	ConsumerGroup string
 }
 
-type JWTConfig struct {
-	Secret string
-}
+func Load() *Config {
+	return &Config{
+		// App
+		APIHost: getEnv("API_HOST", "0.0.0.0"),
+		APIPort: getEnv("API_PORT", "8081"),
 
-func Load() (*Config, error) {
-	port, err := strconv.Atoi(getEnv("SERVER_PORT", "8080"))
-	if err != nil {
-		return nil, fmt.Errorf("invalid SERVER_PORT value: %w", err)
-	}
+		// DB
+		DBHost:     getEnv("DB_HOST", "localhost"),
+		DBPort:     getEnv("DB_PORT", "5432"),
+		DBUser:     getEnv("DB_USER", "transaction"),
+		DBPassword: getEnv("DB_PASSWORD", "password"),
+		DBName:     getEnv("DB_NAME", "transaction_db"),
+		DBSSLMode:  getEnv("DB_SSLMODE", "disable"),
 
-	readTimeout, _ := time.ParseDuration(getEnv("SERVER_READ_TIMEOUT", "10s"))
-	writeTimeout, _ := time.ParseDuration(getEnv("SERVER_WRITE_TIMEOUT", "10s"))
-
-	maxConns, _ := strconv.Atoi(getEnv("DB_MAX_CONNS", "20"))
-
-	redisDB, _ := strconv.Atoi(getEnv("REDIS_DB", "0"))
-
-	cfg := &Config{
-		Server: ServerConfig{
-			Port:         port,
-			Env:          getEnv("ENV", "development"),
-			ReadTimeout:  readTimeout,
-			WriteTimeout: writeTimeout,
-		},
-		Database: DatabaseConfig{
-			User:     getEnv("DB_USER", "postgres"),
-			Password: getEnv("DB_PASSWORD", ""),
-			Name:     getEnv("DB_NAME", "transaction_db"),
-			Host:     getEnv("DB_HOST", "localhost"),
-			Port:     getEnv("DB_PORT", "5432"),
-			SSLMode:  getEnv("DB_SSLMODE", "disable"),
-			MaxConns: maxConns,
-		},
+		// Redis
 		Redis: RedisConfig{
-			Addr:     getEnv("REDIS_ADDR", "localhost:6379"),
+			Host:     getEnv("REDIS_HOST", "localhost"),
+			Port:     getEnv("REDIS_PORT", "6379"),
 			Password: getEnv("REDIS_PASSWORD", ""),
-			DB:       redisDB,
+			DB:       getEnvAsInt("REDIS_DB", 0),
 		},
+
+		// Kafka
 		Kafka: KafkaConfig{
 			Brokers:       getEnv("KAFKA_BROKERS", "localhost:9092"),
-			TopicPrefix:   getEnv("KAFKA_TOPIC_PREFIX", "transactions"),
+			CreatedTopic:  getEnv("KAFKA_CREATED_TOPIC", "transactions.created"),
+			UpdatedTopic:  getEnv("KAFKA_UPDATED_TOPIC", "transactions.updated"),
+			DeletedTopic:  getEnv("KAFKA_DELETED_TOPIC", "transactions.deleted"),
 			ConsumerGroup: getEnv("KAFKA_CONSUMER_GROUP", "transaction-service"),
 		},
-		JWT: JWTConfig{
-			Secret: getEnv("JWT_SECRET", ""),
-		},
-	}
 
-	if cfg.JWT.Secret == "" {
-		return nil, fmt.Errorf("JWT_SECRET is required")
+		// JWT
+		JWTSecret:            getEnv("JWT_SECRET", "secret"),
+		JWTAccessExpiration:  getDuration("JWT_ACCESS_EXPIRATION", 15*time.Minute),
+		JWTRefreshExpiration: getDuration("JWT_REFRESH_EXPIRATION", 24*time.Hour),
 	}
-
-	if cfg.Database.Password == "" {
-		return nil, fmt.Errorf("DB_PASSWORD is required")
-	}
-
-	return cfg, nil
 }
 
 func getEnv(key, fallback string) string {
-	if value, exists := os.LookupEnv(key); exists && value != "" {
+	if value := os.Getenv(key); value != "" {
 		return value
 	}
 	return fallback
 }
 
-func (c *Config) PostgresDSN() string {
-	return fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		c.Database.User,
-		c.Database.Password,
-		c.Database.Host,
-		c.Database.Port,
-		c.Database.Name,
-		c.Database.SSLMode,
-	)
+func getEnvAsInt(key string, fallback int) int {
+	if value := os.Getenv(key); value != "" {
+		if intVal, err := strconv.Atoi(value); err == nil {
+			return intVal
+		}
+	}
+	return fallback
 }
 
-func (c *Config) RedisAddr() string {
-	return c.Redis.Addr
-}
-
-func (c *Config) KafkaBrokersList() []string {
-	return []string{c.Kafka.Brokers}
+func getDuration(key string, fallback time.Duration) time.Duration {
+	if value := os.Getenv(key); value != "" {
+		if d, err := time.ParseDuration(value); err == nil {
+			return d
+		}
+	}
+	return fallback
 }

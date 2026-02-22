@@ -17,7 +17,7 @@ func NewRouter(
 	cfg *config.Config,
 ) *chi.Mux {
 
-	authMiddleware := mid.NewAuthMiddleware(cfg.JWT.Secret)
+	authMiddleware := mid.NewAuthMiddleware(cfg.JWTSecret)
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)

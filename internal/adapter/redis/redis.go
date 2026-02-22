@@ -17,14 +17,15 @@ type RedisClient struct {
 
 func NewRedisClientWithError(cfg config.RedisConfig) (*RedisClient, error) {
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     cfg.Addr,
+		Addr:     fmt.Sprintf("%s:%s", cfg.Host, cfg.Port),
 		Password: cfg.Password,
 		DB:       cfg.DB,
 	})
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 	if err := rdb.Ping(ctx).Err(); err != nil {
-		return nil, fmt.Errorf("failed to connect to Redis at %s: %w", cfg.Addr, err)
+		return nil, fmt.Errorf("failed to connect to Redis: %w", err)
 	}
 
 	return &RedisClient{
