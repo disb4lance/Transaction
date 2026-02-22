@@ -54,10 +54,10 @@ func Load() *Config {
 
 		// DB
 		DBHost:     getEnv("DB_HOST", "localhost"),
-		DBPort:     getEnv("DB_PORT", "5432"),
-		DBUser:     getEnv("DB_USER", "transaction"),
-		DBPassword: getEnv("DB_PASSWORD", "password"),
-		DBName:     getEnv("DB_NAME", "transaction_db"),
+		DBPort:     getEnv("POSTGRES_PORT", "5432"),
+		DBUser:     getEnv("POSTGRES_USER", "transaction"),
+		DBPassword: getEnv("POSTGRES_PASSWORD", "password"),
+		DBName:     getEnv("POSTGRES_DB", "transaction_db"),
 		DBSSLMode:  getEnv("DB_SSLMODE", "disable"),
 
 		// Redis

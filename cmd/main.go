@@ -6,12 +6,15 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
 	_ "transaction-service/docs"
 	"transaction-service/internal/app"
 	"transaction-service/internal/config"
+
+	"github.com/joho/godotenv"
 )
 
 // @title Finance Tracker API
@@ -27,9 +30,9 @@ import (
 // @name Authorization
 // @description Введите ваш JWT токен без префикса "Bearer"
 func main() {
-	// envPath := filepath.Join("..", ".env")
+	envPath := filepath.Join("..", ".env")
 
-	// err := godotenv.Load(envPath)
+	err := godotenv.Load(envPath)
 
 	logger := log.New(os.Stdout, "[transaction-service] ", log.LstdFlags)
 

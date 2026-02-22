@@ -48,60 +48,6 @@ services:
     env_file:
       - .env.docker
 
-  kafka:
-    image: apache/kafka:4.1.1
-    container_name: transaction-kafka
-    ports:
-      - "9092:9092"
-      - "9093:9093"
-    environment:
-      # ID узла и режим работы
-      KAFKA_NODE_ID: 1
-      KAFKA_PROCESS_ROLES: broker,controller
-      
-      # Настройки слушателей
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,PLAINTEXT_HOST://0.0.0.0:9094
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9094
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-      
-      # ID кластера
-      KAFKA_CLUSTER_ID: "4L6g3nShT-eMCtK--X86sw"
-      
-      # Для одного узла
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      
-      # Хранилище
-      KAFKA_LOG_DIRS: /var/lib/kafka/data
-    volumes:
-      - kafka_data:/var/lib/kafka/data
-    healthcheck:
-      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server=localhost:9092"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    restart: unless-stopped
-    networks:
-      - transaction-network
-
-  kafka-ui:
-    image: kafbat/kafka-ui:main
-    container_name: transaction-kafka-ui
-    ports:
-      - "8082:8080"
-    environment:
-      KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
-    depends_on:
-      kafka:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - transaction-network
-
   app:
     build:
       context: .
@@ -144,8 +90,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      kafka:
-        condition: service_healthy
     restart: unless-stopped
     networks:
       - transaction-network
@@ -161,5 +105,3 @@ volumes:
     name: transaction-postgres-data
   redis_data:
     name: transaction-redis-data
-  kafka_data:
-    name: transaction-kafka-data
