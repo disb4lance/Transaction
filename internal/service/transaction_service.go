@@ -63,21 +63,21 @@ func (s *TransactionService) Create(userId uuid.UUID,
 		return nil, err
 	}
 
-	// event := kmodel.TransactionEvent{
-	// 	TransactionID: transaction.ID.String(),
-	// 	UserID:        transaction.UserID.String(),
-	// 	CategoryID:    transaction.CategoryID.String(),
-	// 	Amount:        transaction.Amount,
-	// 	CreatedAt:     transaction.CreatedAt,
-	// }
+	event := kmodel.TransactionEvent{
+		TransactionID: transaction.ID.String(),
+		UserID:        transaction.UserID.String(),
+		CategoryID:    transaction.CategoryID.String(),
+		Amount:        transaction.Amount,
+		CreatedAt:     transaction.CreatedAt,
+	}
 
-	// if err := s.eventPublisher.PublishTransactionEvent(
-	// 	context.Background(),
-	// 	"transactions.created",
-	// 	event,
-	// ); err != nil {
-	// 	return nil, err
-	// }
+	if err := s.eventPublisher.PublishTransactionEvent(
+		context.Background(),
+		"transactions.created",
+		event,
+	); err != nil {
+		return nil, err
+	}
 
 	return &dto.TransactionResponse{
 		Id:         transaction.ID,
@@ -165,26 +165,26 @@ func (s *TransactionService) Update(id uuid.UUID, userId uuid.UUID, transactionN
 		CategoryID: transactionNew.CategoryID,
 	}
 
-	// event := kmodel.TransactionEvent{
-	// 	TransactionID: transaction.ID.String(),
-	// 	UserID:        transaction.UserID.String(),
-	// 	CategoryID:    transaction.CategoryID.String(),
-	// 	Amount:        transaction.Amount,
-	// 	CreatedAt:     transaction.CreatedAt,
-	// }
+	event := kmodel.TransactionEvent{
+		TransactionID: transaction.ID.String(),
+		UserID:        transaction.UserID.String(),
+		CategoryID:    transaction.CategoryID.String(),
+		Amount:        transaction.Amount,
+		CreatedAt:     transaction.CreatedAt,
+	}
 
 	err = s.transactionRepo.Update(transaction)
 	if err != nil {
 		return err
 	}
 
-	// if err := s.eventPublisher.PublishTransactionEvent(
-	// 	context.Background(),
-	// 	"transactions.updated",
-	// 	event,
-	// ); err != nil {
-	// 	return err
-	// }
+	if err := s.eventPublisher.PublishTransactionEvent(
+		context.Background(),
+		"transactions.updated",
+		event,
+	); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -208,21 +208,21 @@ func (s *TransactionService) Delete(userId uuid.UUID, id uuid.UUID) error {
 		return err
 	}
 
-	// event := kmodel.TransactionEvent{
-	// 	TransactionID: transaction.ID.String(),
-	// 	UserID:        transaction.UserID.String(),
-	// 	CategoryID:    transaction.CategoryID.String(),
-	// 	Amount:        transaction.Amount,
-	// 	CreatedAt:     transaction.CreatedAt,
-	// }
+	event := kmodel.TransactionEvent{
+		TransactionID: transaction.ID.String(),
+		UserID:        transaction.UserID.String(),
+		CategoryID:    transaction.CategoryID.String(),
+		Amount:        transaction.Amount,
+		CreatedAt:     transaction.CreatedAt,
+	}
 
-	// if err := s.eventPublisher.PublishTransactionEvent(
-	// 	context.Background(),
-	// 	"transactions.deleted",
-	// 	event,
-	// ); err != nil {
-	// 	return err
-	// }
+	if err := s.eventPublisher.PublishTransactionEvent(
+		context.Background(),
+		"transactions.deleted",
+		event,
+	); err != nil {
+		return err
+	}
 
 	return nil
 }
